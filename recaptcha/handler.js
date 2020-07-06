@@ -17,6 +17,7 @@ const mailTransport = nodemailer.createTransport({
 })
 
 module.exports = async (event, context) => {
+  console.log(event.query, event.path)
   const remoteIpAddress = utils.getClientIp(event)
   const gReCaptcha = event.body['g-recaptcha-response']
   const firstName = event.body['firstName']
@@ -27,7 +28,7 @@ module.exports = async (event, context) => {
   const country = event.body['country']
 
   if (gReCaptcha === undefined || gReCaptcha === '' || gReCaptcha === null) {
-    return context.status(400).succeed({ error: { code: 'ServerError/NullCaptchaValue', message: 'Please select captcha first' } })
+    return context.status(400).fail({ error: { code: 'ServerError/NullCaptchaValue', message: 'Please select captcha first' } })
   }
   const verificationURL = 'https://www.google.com/recaptcha/api/siteverify?secret=' + secretKey + '&response=' + gReCaptcha + '&remoteip=' + remoteIpAddress
 
@@ -38,12 +39,12 @@ module.exports = async (event, context) => {
     if (parsedRecap.success !== undefined && !parsedRecap.success) {
       console.log('Captha/responseError', resCap)
       console.log('Captha/responseError', parsedRecap)
-      return context.status(400).succeed({ error: { code: 'ServerError/ResponseCaptchaError', message: 'Failed captcha verification' } })
+      return context.status(400).fail({ error: { code: 'ServerError/ResponseCaptchaError', message: 'Failed captcha verification' } })
     }
 
   } catch (error) {
     console.log('[ERROR]{RECAPTCHA} - ', error)
-    return context.status(400).succeed({ error: { code: 'ServerError/ResponseCaptchaError', message: 'Failed captcha verification' } })
+    return context.status(400).fail({ error: { code: 'ServerError/ResponseCaptchaError', message: 'Failed captcha verification' } })
 
   }
 
@@ -90,7 +91,7 @@ module.exports = async (event, context) => {
     console.log('[ERROR] send email ', error)
     return context
       .status(400)
-      .succeed({ error: 'Error on sending email!' })
+      .fail({ error: 'Error on sending email!' })
   }
 
 }
