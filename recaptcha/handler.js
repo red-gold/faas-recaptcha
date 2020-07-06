@@ -44,7 +44,7 @@ class Routing {
     this.app.delete('/*', route);
   }
 
-  handle(req, response) {
+  async handle(req, response) {
 
     const remoteIpAddress = req.connection.remoteAddress
     const gReCaptcha = req.body['g-recaptcha-response']
