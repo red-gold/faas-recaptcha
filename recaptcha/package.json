@@ -10,6 +10,8 @@
   "author": "OpenFaaS Ltd",
   "license": "MIT",
   "dependencies": {
-    "is_js": "^0.9.0"
+    "is_js": "^0.9.0",
+    "node-fetch": "^2.6.0",
+    "nodemailer": "^6.4.10"
   }
 }
