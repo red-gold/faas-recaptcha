@@ -4,7 +4,7 @@ provider:
   gateway: http://127.0.0.1:31112
 functions:
   recaptcha:
-    lang: node12
+    lang: node10-express-service
     handler: ./recaptcha
     image: recaptcha:latest
     secrets:
