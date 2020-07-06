@@ -19,57 +19,58 @@ let app
 module.exports = async (config) => {
   if (!app) {
     app = config.app
-    app.post('/*', (req, res, next) => {
-      const form = formidable({ multiples: true });
 
-      form.parse(req, (err, fields, files) => {
-        if (err) {
-          next(err);
-          return;
-        }
-        res.json({ fields, files });
-      });
+  }
+  app.post('/*', (req, res, next) => {
+    const form = formidable({ multiples: true });
+
+    form.parse(req, (err, fields, files) => {
+      if (err) {
+        next(err);
+        return;
+      }
+      res.json({ fields, files });
     });
+  });
+}
+
+const handle = async (req, response) => {
+  console.log(req.fields)
+
+  const remoteIpAddress = req.connection.remoteAddress
+  const gReCaptcha = req.fields['g-recaptcha-response']
+  const firstName = req.fields['firstName']
+  const lastName = req.fields['lastName']
+  const email = req.fields['email']
+  const company = req.fields['company']
+  const message = req.fields['message']
+  const country = req.fields['country']
+
+  if (gReCaptcha === undefined || gReCaptcha === '' || gReCaptcha === null) {
+    return response.json({ error: { code: 'ServerError/NullCaptchaValue', message: 'Please select captcha first' } })
+  }
+  const verificationURL = 'https://www.google.com/recaptcha/api/siteverify?secret=' + secretKey + '&response=' + gReCaptcha + '&remoteip=' + remoteIpAddress
+
+  try {
+    const resCap = await fetch(verificationURL, { method: 'POST' })
+    const parsedRecap = resCap.json()
+
+    if (parsedRecap.success !== undefined && !parsedRecap.success) {
+      console.log('Captha/responseError', resCap)
+      console.log('Captha/responseError', parsedRecap)
+      return response.status(400).json({ error: { code: 'ServerError/ResponseCaptchaError', message: 'Failed captcha verification' } })
+    }
+
+  } catch (error) {
+    console.log('[ERROR]{RECAPTCHA} - ', error)
+    return response.status(400).json({ error: { code: 'ServerError/ResponseCaptchaError', message: 'Failed captcha verification' } })
 
   }
 
-  const handle = async (req, response) => {
-    console.log(req.fields)
+  const from = `${company} contact <${gmailEmail}>`
+  const to = 'amir.gholzam@live.com'
 
-    const remoteIpAddress = req.connection.remoteAddress
-    const gReCaptcha = req.fields['g-recaptcha-response']
-    const firstName = req.fields['firstName']
-    const lastName = req.fields['lastName']
-    const email = req.fields['email']
-    const company = req.fields['company']
-    const message = req.fields['message']
-    const country = req.fields['country']
-
-    if (gReCaptcha === undefined || gReCaptcha === '' || gReCaptcha === null) {
-      return response.json({ error: { code: 'ServerError/NullCaptchaValue', message: 'Please select captcha first' } })
-    }
-    const verificationURL = 'https://www.google.com/recaptcha/api/siteverify?secret=' + secretKey + '&response=' + gReCaptcha + '&remoteip=' + remoteIpAddress
-
-    try {
-      const resCap = await fetch(verificationURL, { method: 'POST' })
-      const parsedRecap = resCap.json()
-
-      if (parsedRecap.success !== undefined && !parsedRecap.success) {
-        console.log('Captha/responseError', resCap)
-        console.log('Captha/responseError', parsedRecap)
-        return response.status(400).json({ error: { code: 'ServerError/ResponseCaptchaError', message: 'Failed captcha verification' } })
-      }
-
-    } catch (error) {
-      console.log('[ERROR]{RECAPTCHA} - ', error)
-      return response.status(400).json({ error: { code: 'ServerError/ResponseCaptchaError', message: 'Failed captcha verification' } })
-
-    }
-
-    const from = `${company} contact <${gmailEmail}>`
-    const to = 'amir.gholzam@live.com'
-
-    const html = `
+  const html = `
         <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
 <html>
   <head>
@@ -92,15 +93,16 @@ module.exports = async (config) => {
   </body>
 </html>
               `
-    const mailOptions = {
-      from: from,
-      to: to,
-      subject: `Telar Social Company Contact - ${company}`,
-      html: html
-    }
-    const result = await mailTransport.sendMail(mailOptions)
-
-
-
-    response.redirect("https://telar.press/pending.html")
+  const mailOptions = {
+    from: from,
+    to: to,
+    subject: `Telar Social Company Contact - ${company}`,
+    html: html
   }
+  const result = await mailTransport.sendMail(mailOptions)
+
+
+
+  response.redirect("https://telar.press/pending.html")
+}
+
