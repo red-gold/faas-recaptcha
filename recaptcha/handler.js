@@ -6,7 +6,7 @@ const utils = require('./utils')
 module.exports = async (event, context) => {
   const secretKey = fs.readFileSync('/var/openfaas/secrets/secret-key', 'utf8');
   const result = {
-    'IP address': 'Your Ip is ' + utils.default.getClientIp(event),
+    'IP address': 'Your Ip is ' + utils.getClientIp(event),
     'random-key': secretKey
   }
 
