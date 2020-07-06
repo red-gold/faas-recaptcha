@@ -17,7 +17,7 @@ const mailTransport = nodemailer.createTransport({
 })
 
 module.exports = async (event, context) => {
-  console.log(event.query, event.path)
+  console.log(event, context)
   const remoteIpAddress = utils.getClientIp(event)
   const gReCaptcha = event.body['g-recaptcha-response']
   const firstName = event.body['firstName']
