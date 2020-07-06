@@ -4,6 +4,7 @@ const fs = require('fs')
 const nodemailer = require('nodemailer')
 const fetch = require('node-fetch');
 const formidable = require('formidable')
+
 const secretKey = fs.readFileSync('/var/openfaas/secrets/secret-key', 'utf8');
 const gmailEmail = fs.readFileSync('/var/openfaas/secrets/gmail', 'utf8');
 const gmailPassword = fs.readFileSync('/var/openfaas/secrets/gmail-pass', 'utf8');
@@ -29,12 +30,13 @@ module.exports = async (config) => {
         next(err);
         return;
       }
-      res.json({ fields, files });
+      req.fields = fields
+      handler(req, res).then()
     });
   });
 }
 
-const handle = async (req, response) => {
+const handler = async (req, response) => {
   console.log(req.fields)
 
   const remoteIpAddress = req.connection.remoteAddress
