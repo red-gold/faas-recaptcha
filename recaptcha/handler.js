@@ -15,70 +15,64 @@ const mailTransport = nodemailer.createTransport({
   }
 })
 
-
+let app
 module.exports = async (config) => {
-  const routing = new Routing(config.app);
-  routing.configure();
-  routing.bind(routing.handle);
+  if (!app) {
+    app = config.app
+    app.use(function (err, req, res, next) {
+      const form = formidable({ multiples: true })
+
+      form.parse(req, (err, fields, files) => {
+        if (err) {
+          next(err);
+          return;
+        }
+        res.fields = fields
+      });
+    })
+    app.disable('x-powered-by');
+  }
+  app.post('/*', handle)
+
 }
 
-class Routing {
-  constructor(app) {
-    this.app = app;
+const handle = async (req, response) => {
+  console.log(req.fields)
+
+  const remoteIpAddress = req.connection.remoteAddress
+  const gReCaptcha = req.fields['g-recaptcha-response']
+  const firstName = req.fields['firstName']
+  const lastName = req.fields['lastName']
+  const email = req.fields['email']
+  const company = req.fields['company']
+  const message = req.fields['message']
+  const country = req.fields['country']
+
+  if (gReCaptcha === undefined || gReCaptcha === '' || gReCaptcha === null) {
+    return response.json({ error: { code: 'ServerError/NullCaptchaValue', message: 'Please select captcha first' } })
   }
+  const verificationURL = 'https://www.google.com/recaptcha/api/siteverify?secret=' + secretKey + '&response=' + gReCaptcha + '&remoteip=' + remoteIpAddress
 
-  configure() {
-    const bodyParser = require('body-parser')
-    this.app.use(bodyParser.json());
-    this.app.use(bodyParser.raw());
-    this.app.use(bodyParser.text({ type: "text/*" }));
-    this.app.disable('x-powered-by');
-  }
+  try {
+    const resCap = await fetch(verificationURL, { method: 'POST' })
+    const parsedRecap = resCap.json()
 
-  bind(route) {
-    this.app.post('/*', route);
-    this.app.get('/*', route);
-    this.app.patch('/*', route);
-    this.app.put('/*', route);
-    this.app.delete('/*', route);
-  }
-
-  async handle(req, response) {
-    console.log(req, response)
-    const remoteIpAddress = req.connection.remoteAddress
-    const gReCaptcha = req.body['g-recaptcha-response']
-    const firstName = req.body['firstName']
-    const lastName = req.body['lastName']
-    const email = req.body['email']
-    const company = req.body['company']
-    const message = req.body['message']
-    const country = req.body['country']
-
-    if (gReCaptcha === undefined || gReCaptcha === '' || gReCaptcha === null) {
-      return response.json({ error: { code: 'ServerError/NullCaptchaValue', message: 'Please select captcha first' } })
-    }
-    const verificationURL = 'https://www.google.com/recaptcha/api/siteverify?secret=' + secretKey + '&response=' + gReCaptcha + '&remoteip=' + remoteIpAddress
-
-    try {
-      const resCap = await fetch(verificationURL, { method: 'POST' })
-      const parsedRecap = resCap.json()
-
-      if (parsedRecap.success !== undefined && !parsedRecap.success) {
-        console.log('Captha/responseError', resCap)
-        console.log('Captha/responseError', parsedRecap)
-        return response.status(400).json({ error: { code: 'ServerError/ResponseCaptchaError', message: 'Failed captcha verification' } })
-      }
-
-    } catch (error) {
-      console.log('[ERROR]{RECAPTCHA} - ', error)
+    if (parsedRecap.success !== undefined && !parsedRecap.success) {
+      console.log('Captha/responseError', resCap)
+      console.log('Captha/responseError', parsedRecap)
       return response.status(400).json({ error: { code: 'ServerError/ResponseCaptchaError', message: 'Failed captcha verification' } })
-
     }
 
-    const from = `${company} contact <${gmailEmail}>`
-    const to = 'amir.gholzam@live.com'
+  } catch (error) {
+    console.log('[ERROR]{RECAPTCHA} - ', error)
+    return response.status(400).json({ error: { code: 'ServerError/ResponseCaptchaError', message: 'Failed captcha verification' } })
 
-    const html = `
+  }
+
+  const from = `${company} contact <${gmailEmail}>`
+  const to = 'amir.gholzam@live.com'
+
+  const html = `
         <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
 <html>
   <head>
@@ -101,16 +95,15 @@ class Routing {
   </body>
 </html>
               `
-    const mailOptions = {
-      from: from,
-      to: to,
-      subject: `Telar Social Company Contact - ${company}`,
-      html: html
-    }
-    const result = await mailTransport.sendMail(mailOptions)
-
-
-
-    response.redirect("https://telar.press/pending.html")
+  const mailOptions = {
+    from: from,
+    to: to,
+    subject: `Telar Social Company Contact - ${company}`,
+    html: html
   }
+  const result = await mailTransport.sendMail(mailOptions)
+
+
+
+  response.redirect("https://telar.press/pending.html")
 }
