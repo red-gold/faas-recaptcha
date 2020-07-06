@@ -44,7 +44,7 @@ class Routing {
   }
 
   async handle(req, response) {
-
+    console.log(req, response)
     const remoteIpAddress = req.connection.remoteAddress
     const gReCaptcha = req.body['g-recaptcha-response']
     const firstName = req.body['firstName']
