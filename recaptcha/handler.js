@@ -1,7 +1,6 @@
 'use strict'
 
 const fs = require('fs')
-const utils = require('./utils')
 const nodemailer = require('nodemailer')
 const fetch = require('node-fetch');
 
