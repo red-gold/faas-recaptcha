@@ -27,6 +27,7 @@ module.exports = async (config) => {
           next(err);
           return;
         }
+        console.log({ fields })
         res.fields = fields
       });
     })
